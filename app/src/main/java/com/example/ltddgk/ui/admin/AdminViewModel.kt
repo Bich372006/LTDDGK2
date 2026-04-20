@@ -1,105 +1,81 @@
 package com.example.ltddgk.ui.admin
 
-import android.net.Uri // 🔥 CỰC KỲ QUAN TRỌNG: Phải có dòng này
+import android.net.Uri
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
-
-// Model User khớp với các thuộc tính bạn dùng trong UI
-data class User(
-    val id: Int,
-    val name: String,
-    val pass: String,
-    val username: String = "",
-    val role: String = "Sinh viên",
-    val imageUrl: String = ""
-)
+import com.example.ltddgk.data.model.User
+import com.google.firebase.firestore.FirebaseFirestore
+import java.util.UUID
 
 class AdminViewModel : ViewModel() {
-    // 1. State cho Form nhập liệu
-    var nameInput = mutableStateOf("")
+    private val db = FirebaseFirestore.getInstance()
+    private val usersCollection = db.collection("users")
+
     var usernameInput = mutableStateOf("")
     var passwordInput = mutableStateOf("")
-
-    // 🔹 BIẾN NÀY GIÚP HẾT LỖI ĐỎ Ở ADMIN DASHBOARD
+    var roleInput = mutableStateOf("")
     var imageUriInput = mutableStateOf<Uri?>(null)
 
-    // 2. Lưu user đang được sửa (null = đang ở chế độ Thêm mới)
     var editingUser = mutableStateOf<User?>(null)
+    var userList = mutableStateListOf<User>()
 
-    // 3. Danh sách User mẫu
-    var userList = mutableStateListOf(
-        User(1, "Bích", "123", "bich_vku", "Admin"),
-        User(2, "Nguyễn Văn A", "abc", "vana123", "Sinh viên")
-    )
+    init { fetchUsers() }
 
-    // Hàm Thêm mới User
-    fun saveUser() {
-        if (nameInput.value.isNotBlank() && passwordInput.value.isNotBlank()) {
-            val newId = if (userList.isEmpty()) 1 else userList.maxOf { it.id } + 1
-
-            // Chuyển Uri ảnh sang String để lưu vào Model
-            val imagePath = imageUriInput.value?.toString() ?: ""
-
-            val newUser = User(
-                id = newId,
-                name = nameInput.value,
-                pass = passwordInput.value,
-                username = usernameInput.value.ifBlank { "user_$newId" },
-                role = "Sinh viên",
-                imageUrl = imagePath // 🔥 Lưu đường dẫn ảnh vào đây
-            )
-            userList.add(newUser)
-            clearForm()
+    private fun fetchUsers() {
+        usersCollection.addSnapshotListener { snapshot, _ ->
+            snapshot?.let {
+                userList.clear()
+                for (doc in it.documents) {
+                    val user = doc.toObject(User::class.java)
+                    // 🔥 Gán document.id vào model để luôn có ID dùng cho Sửa/Xóa
+                    user?.let { u -> userList.add(u.copy(id = doc.id)) }
+                }
+            }
         }
     }
 
-    // Hàm chuẩn bị dữ liệu để Sửa
+    fun saveUser() {
+        if (usernameInput.value.isNotBlank()) {
+            val id = UUID.randomUUID().toString()
+            val data = hashMapOf(
+                "id" to id,
+                "name" to usernameInput.value,
+                "password" to passwordInput.value,
+                "role" to roleInput.value.ifBlank { "user" },
+                "avatarUrl" to (imageUriInput.value?.toString() ?: "")
+            )
+            usersCollection.document(id).set(data).addOnSuccessListener { clearForm() }
+        }
+    }
+
+    fun updateUser() {
+        editingUser.value?.let { current ->
+            val data = hashMapOf<String, Any>(
+                "name" to usernameInput.value,
+                "password" to passwordInput.value,
+                "role" to roleInput.value,
+                "avatarUrl" to (imageUriInput.value?.toString() ?: "")
+            )
+            usersCollection.document(current.id).update(data).addOnSuccessListener { cancelEditing() }
+        }
+    }
+
+    fun deleteUser(user: User) {
+        usersCollection.document(user.id).delete()
+    }
+
     fun startEditing(user: User) {
         editingUser.value = user
-        nameInput.value = user.name
-        usernameInput.value = user.username
-        passwordInput.value = user.pass
-
-        // Hiển thị lại ảnh cũ lên form nếu có
-        imageUriInput.value = if (user.imageUrl.isNotEmpty()) Uri.parse(user.imageUrl) else null
+        usernameInput.value = user.name
+        passwordInput.value = user.password
+        roleInput.value = user.role
+        imageUriInput.value = if (user.avatarUrl.isNotEmpty()) Uri.parse(user.avatarUrl) else null
     }
 
-    // Hàm cập nhật User sau khi sửa
-    fun updateUser() {
-        val current = editingUser.value
-        if (current != null) {
-            val index = userList.indexOfFirst { it.id == current.id }
-            if (index != -1) {
-                val imagePath = imageUriInput.value?.toString() ?: ""
+    fun cancelEditing() { editingUser.value = null; clearForm() }
 
-                userList[index] = current.copy(
-                    name = nameInput.value,
-                    pass = passwordInput.value,
-                    username = usernameInput.value,
-                    imageUrl = imagePath // 🔥 Cập nhật ảnh mới
-                )
-            }
-            cancelEditing()
-        }
-    }
-
-    // Hàm Xóa User
-    fun deleteUser(user: User) {
-        userList.remove(user)
-    }
-
-    // Hàm Hủy chế độ sửa
-    fun cancelEditing() {
-        editingUser.value = null
-        clearForm()
-    }
-
-    // Hàm xóa trắng các ô nhập liệu
     private fun clearForm() {
-        nameInput.value = ""
-        usernameInput.value = ""
-        passwordInput.value = ""
-        imageUriInput.value = null // 🔥 Xóa ảnh trên form
+        usernameInput.value = ""; passwordInput.value = ""; roleInput.value = ""; imageUriInput.value = null
     }
 }

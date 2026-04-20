@@ -1,13 +1,12 @@
-package com.example.ltddgk // Hoặc package com.example.ltddgk.ui.auth tùy vị trí file này
+package com.example.ltddgk.ui.auth
 
 import androidx.compose.runtime.Composable
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
-
-// QUAN TRỌNG: Thêm 2 dòng import này để hết lỗi đỏ
-import com.example.ltddgk.ui.auth.LoginScreen
-import com.example.ltddgk.ui.auth.RegisterScreen
+import com.example.ltddgk.ui.admin.AdminDashboard
+import com.example.ltddgk.ui.admin.AdminViewModel
 
 @Composable
 fun AuthScreen() {
@@ -17,14 +16,55 @@ fun AuthScreen() {
         navController = navController,
         startDestination = "login"
     ) {
-        // Màn hình Đăng nhập
+        // 1. Màn hình Đăng Nhập
         composable("login") {
-            LoginScreen(navController = navController)
+            LoginScreen(
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onForgotPassword = {
+                    // Bích có thể thêm logic quên mật khẩu ở đây sau
+                },
+                onLoginSuccess = {
+                    // Chuyển sang Dashboard và xóa lịch sử màn hình Login
+                    navController.navigate("admin_dashboard") {
+                        popUpTo("login") { inclusive = true }
+                    }
+                },
+                onNavigateToRegister = {
+                    navController.navigate("register")
+                }
+            )
         }
 
-        // Màn hình Đăng ký
+        // 2. Màn hình Đăng Ký
         composable("register") {
-            RegisterScreen(navController = navController)
+            RegisterScreen(
+                navController = navController, // 🔥 Tham số quan trọng để hết lỗi đỏ
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onRegisterSuccess = {
+                    // Đăng ký xong quay về màn hình Login
+                    navController.navigate("login") {
+                        popUpTo("register") { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        // 3. Màn hình Quản Lý (Admin)
+        composable("admin_dashboard") {
+            val adminViewModel: AdminViewModel = viewModel()
+            AdminDashboard(
+                viewModel = adminViewModel,
+                onLogout = {
+                    // Đăng xuất và quay về màn hình Login
+                    navController.navigate("login") {
+                        popUpTo("admin_dashboard") { inclusive = true }
+                    }
+                }
+            )
         }
     }
 }

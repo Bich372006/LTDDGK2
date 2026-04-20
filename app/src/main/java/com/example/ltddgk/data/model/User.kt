@@ -1,19 +1,10 @@
 package com.example.ltddgk.data.model
 
+// Sử dụng mặc định rỗng cho tất cả các trường để tránh lỗi Mapping
 data class User(
     val id: String = "",
-    val username: String = "",
-    val password: String = "",
+    val name: String = "",
     val role: String = "",
+    val password:String= "",
     val avatarUrl: String = ""
-) {
-    // Hiển thị gọn
-    fun displayName(): String {
-        return "$username ($role)"
-    }
-
-    // Kiểm tra dữ liệu hợp lệ
-    fun isValid(): Boolean {
-        return username.isNotBlank() && password.isNotBlank()
-    }
-}
+)

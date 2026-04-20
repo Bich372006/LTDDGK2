@@ -10,7 +10,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.example.ltddgk.ui.admin.AdminViewModel
-import com.example.ltddgk.ui.admin.User // Đảm bảo dòng này không bị báo xám
+import com.example.ltddgk.data.model.User // Đảm bảo dòng này không bị báo xám
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -43,7 +43,7 @@ fun UserItemRow(user: User) {
         ) {
             // Hiển thị ảnh đại diện
             AsyncImage(
-                model = if (user.imageUrl.isEmpty()) "https://via.placeholder.com/150" else user.imageUrl,
+                model = if (user.avatarUrl.isEmpty()) "https://via.placeholder.com/150" else user.avatarUrl,
                 contentDescription = null,
                 modifier = Modifier.size(50.dp)
             )
@@ -52,7 +52,7 @@ fun UserItemRow(user: User) {
 
             Column {
                 Text(text = user.name, style = MaterialTheme.typography.titleMedium)
-                Text(text = "@${user.username}", style = MaterialTheme.typography.bodySmall)
+                Text(text = "@${user.name}", style = MaterialTheme.typography.bodySmall)
                 Text(text = "Vai trò: ${user.role}", color = MaterialTheme.colorScheme.primary)
             }
         }
